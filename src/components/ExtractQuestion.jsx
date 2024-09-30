@@ -148,7 +148,52 @@ const ExtractQuestion = () => {
     const matches = extractedText.match(answerRegex)
 
     if (matches) {
-      console.log({ matches, lenght: matches.length })
+      const tentativeNumOfQuestions = Math.floor(matches.length/4)
+      const questionsAndAnswer = []
+      setExtractedText(extractedText.slice(/1/gim.exec(extractedText)?.index))
+      const firstQuestion = extractedText.slice(0, answerRegex.exec(extractedText).index)
+      questionsAndAnswer[0] = {
+        question: firstQuestion
+      }
+      let match
+
+      console.log({ matches, lenght: matches.length, firstQuestion, tentativeNumOfQuestions })
+
+      for (let i = 0; i < tentativeNumOfQuestions;) {
+        let loopAnswers = []
+        for (let j = 0; j < 4; j++) {
+          console.log(i)
+          if ((match = answerRegex.exec(extractedText)) !== null) {
+            const nextIndex = match.index + matches[i * 4 + j]
+            if (nextIndex) {
+              loopAnswers.push(extractedText.slice(match.index, nextIndex))
+            } else {
+              let lastAnswer = ''
+              extractedText.slice(match.index).split('\n').forEach((value) => {
+                if (!/\d/gi.test(value.trim().charAt(0))) {
+                  lastAnswer += ' value'
+                }
+              })
+              loopAnswers.push(lastAnswer)
+              setExtractedText(extractedText.slice(extractedText.indexOf(lastAnswer)))
+              if (i < tentativeNumOfQuestions) {
+                questionsAndAnswer[i + 1] = {
+                  question: extractedText.slice(0, nextIndex + 1)
+                }
+              }
+            }
+          }
+          if (j === 3) {
+            console.log({ i, quest: questionsAndAnswer[i] })
+            questionsAndAnswer[i] = {
+              question: questionsAndAnswer[i]?.question,
+              answers: loopAnswers
+            }
+          }
+        }
+        i += 1
+      }
+      console.log({ questionsAndAnswer })
     }
   }
 
