@@ -27,9 +27,9 @@ const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages }
     <div>
       {pdfFile && (
         <div
-          className="flex flex-col gap-2 justify-center items-center border border-gray-300 p-2 roundedn-xl max-w-[630px] h-[100vh] mx-auto"
+          className="flex flex-col gap-2 justify-center items-center border border-gray-300 p-2 roundedn-xl max-w-[630px] h-[95vh] mx-auto"
         >
-        <Document file={pdfFile} onLoadSuccess={onDocumentLoadSuccess} className="h-[calc(100vh - 80px)]">
+        <Document file={pdfFile} onLoadSuccess={onDocumentLoadSuccess} className="h-[calc(100% - 80px))] w-full">
           <Page pageNumber={pageNumber} />
         </Document>
         {loaded && <div className="w-full flex justify-between items-center gap-2 px-4">

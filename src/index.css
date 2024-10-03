@@ -16,3 +16,11 @@
 body {
   margin: 0;
 }
+
+button {
+  cursor: pointer;
+}
+
+*, *::before, *::after {
+ box-sizing: border-box;
+}
