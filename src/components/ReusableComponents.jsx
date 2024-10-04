@@ -9,27 +9,27 @@ export const MButton = (props) => {
     </span>)
   }
 
-  const classStyle = `h-[50px] text-white font-bold py-2 px-4 rounded-lg shadow-md disabled:bg-gray-500 
+  const classStyle = `h-[40px] text-white font-bold py-2 px-4 rounded-md shadow-md disabled:bg-gray-500 
     flex justify-center items-center disabled:cursor-not-allowed`
 
   const type = () => {
     switch (props.type) {
       case 'primary':
-        return 'bg-blue-500 hover:bg-blue-700'
+        return 'bg-blue-600 hover:bg-blue-700'
       case 'secondary':
-        return 'bg-gray-500 hover:bg-gray-700'
+        return 'bg-gray-600 hover:bg-gray-700'
       case 'success':
-        return 'bg-green-500 hover:bg-green-700'
+        return 'bg-teal-600 hover:bg-green-700'
       case 'warning':
-        return 'bg-yellow-500 hover:bg-yellow-700'
+        return 'bg-yellow-600 hover:bg-yellow-700'
       case 'dark':
         return 'bg-gray-800 hover:bg-gray-900'
       case 'link':
         return 'bg-transparent hover:bg-transparent'
       case 'danger':
-        return 'bg-red-500 hover:bg-red-700'
+        return 'bg-red-600 hover:bg-red-700'
       default:
-        return 'bg-blue-500 hover:bg-blue-700'
+        return 'bg-sky-600 hover:bg-blue-700'
     }
   }
 
@@ -38,11 +38,11 @@ export const MButton = (props) => {
       case 'small':
         return 'text-sm min-w-24'
       case 'medium':
-        return 'text-base min-w-32'
+        return 'text-md min-w-32'
       case 'large':
         return 'text-lg min-w-40'
       default:
-        return 'text-base min-w-32'
+        return 'text-md min-w-32'
     }
   }
   return (

@@ -1,12 +1,20 @@
 /* eslint-disable react/prop-types */
-import { useState } from 'react'
+import { useState, forwardRef, useEffect } from 'react'
 import { pdfjs, Document, Page } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages }) => {
+const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages, pdfFileRef }) => {
   const [loaded, setLoaded] = useState(false);
 
-   function onDocumentLoadSuccess({ numPages }) {
+  useEffect(() => {
+    setPageNumber(1);
+  }, [pdfFile, setPageNumber]);
+
+  function onDocumentLoadSuccess({ numPages }) {
+     console.log('loaded')
      setNumPages(numPages);
      setLoaded(true);
    }
@@ -27,11 +35,13 @@ const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages }
     <div>
       {pdfFile && (
         <div
-          className="flex flex-col gap-2 justify-center items-center border border-gray-300 p-2 roundedn-xl max-w-[630px] h-[95vh] mx-auto"
+          className="!z-[0] flex flex-col gap-2 justify-center items-center border border-gray-300 p-2 roundedn-xl max-w-[630px] h-[95vh] mx-auto"
         >
-        <Document file={pdfFile} onLoadSuccess={onDocumentLoadSuccess} className="h-[calc(100% - 80px))] w-full">
-          <Page pageNumber={pageNumber} />
-        </Document>
+          <div ref={pdfFileRef}>
+            <Document file={pdfFile} onLoadSuccess={onDocumentLoadSuccess} className="h-[calc(100% - 40px))] w-full !z-[0]">
+              <Page pageNumber={pageNumber} />
+            </Document>
+          </div>
         {loaded && <div className="w-full flex justify-between items-center gap-2 px-4">
           <button
             type="button"
@@ -57,5 +67,9 @@ const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages }
     </div>
   )
 }
+
+export const PdfViewerWrapper = forwardRef(function (props, ref) {
+  return <PdfViewer {...props} pdfFileRef={ref} />
+})
 
 export default PdfViewer

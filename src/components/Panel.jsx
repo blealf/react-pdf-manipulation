@@ -1,13 +1,14 @@
 import { useEffect } from 'react'
 import PropTypes from 'prop-types'
 
-const panelSidesStyle = `w-full h-1/2 overflow-hidden min-w-[300px] border border-gray-300`
-export const LeftPanel = ({ children }) => {
+const panelSidesStyle = `w-full max-h-[90%] h-1/2 overflow-hidden min-w-[300px] border border-gray-300`
+export const LeftPanel = ({ children, defaultHeight }) => {
+  const height = defaultHeight ? { height: defaultHeight } : {}
   return (
     <div
       id="m_left_panel"
       className={`${panelSidesStyle} left-0`}
-      style={{ scrollbarWidth: 'thin'}}
+      style={{ scrollbarWidth: 'thin', ...height }}
     >
        <div className="">
         {children}
@@ -16,12 +17,13 @@ export const LeftPanel = ({ children }) => {
   )
 }
 
-export const RightPanel = ({ children }) => {
+export const RightPanel = ({ children, defaultHeight }) => {
+  const height = defaultHeight ? { height: defaultHeight } : {}
   return (
     <div
       id="m_right_panel"
       className={`${panelSidesStyle} relative right-0`}
-      style={{ scrollbarWidth: 'thin'}}
+      style={{ scrollbarWidth: 'thin', ...height }}
     >
       <div
         id="m_gutter"
@@ -36,10 +38,12 @@ export const RightPanel = ({ children }) => {
 
 LeftPanel.propTypes = {
   children: PropTypes.node,
+  defaultHeight: PropTypes.string
 }
 
 RightPanel.propTypes = {
   children: PropTypes.node,
+  defaultHeight: PropTypes.string
 }
 
 const Panel = ({ children }) => {

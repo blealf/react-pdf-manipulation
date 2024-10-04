@@ -24,3 +24,10 @@ button {
 *, *::before, *::after {
  box-sizing: border-box;
 }
+
+.cropper-background {
+  max-width: none; /* Allows the background to be larger than the container */
+  max-height: none; /* Allows the background to exceed the cropper */
+  object-fit: contain; /* Ensures the image fits nicely inside the cropper */
+  cursor: pointer; /* Changes the cursor when dragging */
+}

@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 import { MButton } from './ReusableComponents'
 
-const ControlPanel = ({ answerStyle, extractedText, handlePopulateQuestions, handleExtractContent, isExtracting, handleExtractPageText }) => {
+const ControlPanel = ({ answerStyle, extractedText, handlePopulateQuestions, disablePopulateButton, handleExtractContent, isExtracting, handleExtractPageText }) => {
   return (
     <div className="flex flex-col md:flex-row gap-2 justify-start items-center">
       <div className="flex flex-col md:flex-row gap-2 justify-start items-center">
@@ -17,7 +17,8 @@ const ControlPanel = ({ answerStyle, extractedText, handlePopulateQuestions, han
           disabled={!answerStyle || answerStyle === 'custom'}
           type="success"
           size="small"
-          loading={isExtracting}
+            loading={isExtracting}
+            className="bg-teal-600"
         >
           Extract Questions
         </MButton>
@@ -40,7 +41,7 @@ const ControlPanel = ({ answerStyle, extractedText, handlePopulateQuestions, han
     </div>
       {extractedText && <div className="flex gap-2 items-center">
         <div>
-          <MButton onClick={handlePopulateQuestions} size="small">Populate Questions</MButton>
+          <MButton onClick={handlePopulateQuestions} size="small" disabled={disablePopulateButton}>Populate Questions</MButton>
         </div>
         {/* {selection && !question && (
           <button
@@ -79,6 +80,7 @@ ControlPanel.propTypes = {
   handlePopulateQuestions: PropTypes.func,
   handleExtractPageText: PropTypes.func,
   isExtracting: PropTypes.bool,
+  disablePopulateButton: PropTypes.bool
 }
 
 export default ControlPanel

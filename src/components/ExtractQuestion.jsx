@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
 import pdfToText from "react-pdftotext";
+import * as pdfjsLib from 'pdfjs-dist/build/pdf';
+import html2canvas from 'html2canvas';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 import QuestionsCard from './QuestionsCard';
-import PdfViewer from './PdfViewer';
+import PdfViewer, { PdfViewerWrapper } from './PdfViewer';
 import { MButton } from './ReusableComponents'
 import Panel, { LeftPanel, RightPanel } from './Panel'
 import AnswerStyle from './AnswerStyle';
@@ -31,6 +33,7 @@ const ExtractQuestion = () => {
   
   const textareaRef = useRef(null)
   const fileInput = useRef(null)
+  const pdfFileRef = useRef(null)
 
   useEffect(() => {
     textareaRef.current.addEventListener('selectionchange', getSelectedText)
@@ -49,10 +52,16 @@ const ExtractQuestion = () => {
   useEffect(() => {
     if (extractedPageText.length > 0) {
       setExtractedText(extractedPageText[pageNumber - 1]?.text)
-      if(!extractedPageText[pageNumber - 1]?.image) return
-      const blob = base64toBlob(extractedPageText[pageNumber - 1]?.image, 'png');
-      const blobUrl = URL.createObjectURL(blob);
-      setExtractedImage(blobUrl)
+      setIsExtracting(true)
+      setTimeout(async () => {
+        await handleImageConvert()
+        setIsExtracting(false)
+      }, 1000)
+      
+      // if(!extractedPageText[pageNumber - 1]?.image) return
+      // const blob = base64toBlob(extractedPageText[pageNumber - 1]?.image, 'png');
+      // const blobUrl = URL.createObjectURL(blob);
+      // setExtractedImage(blobUrl)
     }
   }, [pageNumber, extractedPageText])
 
@@ -117,6 +126,85 @@ const ExtractQuestion = () => {
       .catch((err) => console.log(err))
       .finally(() => setIsExtracting(false))
     
+  }
+
+  const convertPDFToDataURL = () => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = function() {
+        try {
+          // Convert binary data to base64 and create a Data URL
+          const base64String = reader.result.split(',')[1];
+          const dataUrl = `data:application/pdf;base64,${base64String}`;
+          resolve(dataUrl); // Resolve the promise with the data URL
+        } catch (error) {
+          reject(error); // Reject in case of any errors
+        }
+      };
+
+      reader.onerror = function() {
+        reject(reader.error); // Reject if there’s a reading error
+      };
+
+      reader.readAsDataURL(pdfFile); // Read the PDF file as a Data URL
+    });
+  }
+
+  const blobToBase6 = (blob) => {
+  return new Promise((resolve, _) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+
+  const handleConvertPdfToImage = async () => {
+    const imagesList = [];
+    console.log({ pdfFile })
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("className", "canv");
+    const data = await blobToBase6(pdfFile);
+    console.log({ data })
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      var page = await pdf.getPage(i);
+      var viewport = page.getViewport({ scale: 1.5 });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      var render_context = {
+        canvasContext: canvas.getContext("2d"),
+        viewport: viewport,
+      };
+      await page.render(render_context).promise;
+      let img = canvas.toDataURL("image/png");
+      imagesList.push(img);
+    }
+    console.log({ imagesList })
+  }
+
+  const handleImageConvert = async () => {
+    // e.preventDefault()
+    try {
+      console.log({ pdfFileRef })
+      // highresolution html2Canvas
+      const output = await html2canvas(pdfFileRef.current, {
+        type: 'dataURL',
+        useCORS: false,
+        removeContainer: true,
+        logging: true,
+        scale: 2,
+        width: pdfFileRef.current?.offsetWidth,
+        height: pdfFileRef.current?.offsetHeight,
+        dpi: 600,
+        allowTaint: true,
+      })
+      const base64Image = output?.toDataURL('image/png');
+      setExtractedImage(base64Image)
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   const extractText = async () => {
@@ -212,20 +300,29 @@ const ExtractQuestion = () => {
   return (
     <>
       <div className="p-4 w-full flex" style={isExtracting ? { pointerEvents: 'none', opacity: 0.5 } : {}}>
-        <div className="w-1/2">
-            <PdfViewer
+        <div className="w-1/2 !z-[0]">
+          <PdfViewerWrapper
             pdfFile={pdfFile}
             numPages={numPages}
             pageNumber={pageNumber}
             setPageNumber={setPageNumber}
             setNumPages={setNumPages}
+            ref={pdfFileRef}
           />
         </div>
         <div className="w-1/2">
           <Panel>
             <LeftPanel>
               <div className="relative">
-                {pdfFile && <div className="absolute left-0 right-0 w-full flex justify-between items-center p-2">
+                {pdfFile && <div className="absolute left-0 right-0 w-full flex gap-2 justify-between items-center p-2">
+                  {pdfFile && <div className="flex flex-col gap-2 justify-start items-center">
+                    {!extractedText && <AnswerStyle
+                      answerStyle={answerStyle}
+                      setAnswerStyle={setAnswerStyle}
+                      customAnswerStyle={customAnswerStyle}
+                      setCustomAnswerStyle={setCustomAnswerStyle}
+                    />}
+                  </div>}
                   <ControlPanel
                     answerStyle={answerStyle}
                     setAnswerStyle={setAnswerStyle}
@@ -234,6 +331,7 @@ const ExtractQuestion = () => {
                     handleExtractContent={handleExtractContent}
                     isExtracting={isExtracting}
                     handleExtractPageText={handleExtractPageText}
+                    disablePopulateButton={questions.length > 0}
                   />
                   <MButton onClick={handleClear} type="danger" size="small" className="ml-auto">Reset</MButton>
                 </div>}
@@ -253,14 +351,7 @@ const ExtractQuestion = () => {
                       />
                     </form>)
                   }
-                  {pdfFile && <div className="flex flex-col gap-2 justify-start items-center">
-                    {!extractedText && <AnswerStyle
-                      answerStyle={answerStyle}
-                      setAnswerStyle={setAnswerStyle}
-                      customAnswerStyle={customAnswerStyle}
-                      setCustomAnswerStyle={setCustomAnswerStyle}
-                    />}
-                  </div>}
+                  
                   <textarea
                     ref={textareaRef}
                     value={question.length ? question : extractedText}
@@ -271,18 +362,19 @@ const ExtractQuestion = () => {
                 </div>
               </div>
             </LeftPanel>
-            <RightPanel>
+            <RightPanel defaultHeight="90%">
               <QuestionsCard
                 questions={questions}
                 handleClearQuestions={handleClearQuestions}
                 updateQuestions={updateQuestions}
                 updateQuestionDatabase={updateQuestionDatabase}
+                extractedImage={extractedImage}
               />
             </RightPanel>
           </Panel>
         </div>
       </div>
-        {extractedImage && <img src={extractedImage} alt="Extracted Image" className="w-full h-full object-cover" />}
+      {extractedImage && <img src={extractedImage} alt="Extracted Image" className="w-[50%] mx-auto h-[auto] object-cover" />}
     </>
   )
 }
