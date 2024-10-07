@@ -99,18 +99,29 @@ const QuestionsCard = ({ questions, updateQuestions, updateQuestionDatabase, ext
     setEditedQuestion({ ...currentQuestion, question: currentQuestion.question, validated: false })
   }
 
+  const insertAnswer = (array, index, value) => {
+    const otherAnswers = [...array.answers.filter((_, i) => i !== index).map((ans) => ({ ...ans, valid: false }))]
+    otherAnswers.splice(index, 0,
+      {
+        value: array.answers[index].value,
+        valid: value
+      })
+    return otherAnswers
+  }
+
   const handleUpdateAnswers = (index, value, isCorrectAnswer) => {
     if (isCorrectAnswer) {
-      const otherAnswers = [...editedQuestion.answers.filter((_, i) => i !== index).map((ans) => ({ ...ans, valid: false }))]
-      otherAnswers.splice(index, 0,
-        {
-          value: editedQuestion.answers[index].value,
-          valid: value
+      if (editIndex !== null) {
+        const otherAnswers = insertAnswer(editedQuestion, index, value)
+        setEditedQuestion({
+          ...editedQuestion,
+          answers: otherAnswers
         })
-      setEditedQuestion({
-      ...editedQuestion,
-        answers: otherAnswers
-      })
+      } else {
+        const otherAnswers = insertAnswer(currentQuestion, index, value)
+        setCurrentQuestion({ ...currentQuestion, answers: otherAnswers })
+        handleSaveQuestion(null, { ...currentQuestion, answers: otherAnswers })
+      }
       return
     }
     const answers = [
@@ -267,7 +278,25 @@ const QuestionsCard = ({ questions, updateQuestions, updateQuestionDatabase, ext
                   </div>
                   <h3 className="mt-3 mb-1 font-bold">Answers</h3>
                   {currentQuestion.answers.map((answer, idx) => (
-                    <p key={idx} className={`flex gap-2 max-w-[300px]`}>{idx + 1}. {answer.value} {answer.valid && <span className="flex justify-center items-center text-xs gap-1 border border-green-500 px-1 rounded-md text-green-500">ANS <FaCheck  /></span>}</p>
+                    <p key={idx} className={`capitalize grid grid-cols-[30px_1fr_50px] gap-2 max-w-[300px]`}>
+                      <span>{idx + 1}. </span>
+                      <span>{answer.value}</span>
+                      {answer.valid ? <span
+                        className="flex justify-center items-center text-xs gap-1 border 
+                        border-green-500 px-2 rounded-md text-green-500 mb-1 min-w-[60px] h-[30px]"
+                        >ANS <FaCheck /></span> :
+                        <MButton
+                          type="secondary"
+                          size="small"
+                          className={`min-w-[60px] w-[60px] !px-2 flex gap-1 justify-center items-center opacity-50 
+                            hover:opacity-100 hover:bg-green-600 !h-[30px] !rounded-[5px] ${answer.valid && '!bg-teal-500 opacity-100'}`}
+                          onClick={() => handleUpdateAnswers(idx, true, true)}
+                        >
+                          ANS {answer.valid && <FaCheck />}
+                        </MButton>
+                      }
+                    
+                    </p>
                   ))}
                 </div>}
             </div>

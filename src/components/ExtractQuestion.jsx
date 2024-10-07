@@ -83,6 +83,7 @@ const ExtractQuestion = () => {
         // get Text from the pdf
         const textContent = await page.getTextContent();
         textContent.items.forEach((item) => {
+          console.log(item)
           if ("str" in item) {
             if (item.hasEOL) {
               getText += item.str + " \n";
