@@ -20,22 +20,24 @@ const processAnswerPattern = ({ extractedText, answerStyle, numberOfAnswers }) =
       }
     }
   }
-
   // eslint-disable-next-line no-useless-escape
   const escapedPattern = pattern.replace(/([.*+?^=!:${}()\[\]\/\\])/g, "\\$1").trim();
   const answerRegex = new RegExp(escapedPattern, 'ig')
   const matches = extractedText.match(answerRegex)
-
+  
   return {matches, answerRegex}
 }
-export const extractQuestionAndAnswers = ({ extractedText, answerStyle }) => {
+
+export const cleanupString = (str) => str.replace(/[\n\r]/g, '').replace(/\s\s+/g, ' ').trim()
+
+export const extractQuestionAndAnswers = ({ extractedText, answerStyle, currentNumber }) => {
   const numberOfAnswers = 4
   const {matches, answerRegex} = processAnswerPattern({ extractedText, answerStyle, numberOfAnswers })
 
   if (!matches) return { extractedTextCopy: extractedText, questionsAndAnswer: [] }
   
   let extractedTextCopy = extractedText
-  const firstQuestion = extractedTextCopy.slice(0, extractedTextCopy.indexOf(matches[0]))
+  const firstQuestion = cleanupString(extractedTextCopy.slice(0, extractedTextCopy.indexOf(matches[0])))
   extractedTextCopy = extractedTextCopy.replace(firstQuestion, '')
   const questionsAndAnswer = [{ question: firstQuestion, answers: [] }]
 
@@ -56,24 +58,22 @@ export const extractQuestionAndAnswers = ({ extractedText, answerStyle }) => {
       try {
         lastAnswer = lastAnswerMatch.slice(0, lastAnswerMatch.indexOf(lastAnswerMatch.match(/\d/gi)[0]))
       } catch (error) {
-        console.log(error)
+        // console.log(error)
       }
       extractedAnswer = lastAnswer
-      console.log({ extractedAnswer })
       const lastIndexOfLastAnswer = currentIndex + extractedAnswer.length
 
       if(matches[ i + 1]?.length) {
         questionsAndAnswer.push({
-          question: extractedTextCopy.slice(lastIndexOfLastAnswer, nextIndex),
+          question: cleanupString(extractedTextCopy.slice(lastIndexOfLastAnswer, nextIndex)),
           answers: []
         })
         extractedTextCopy = extractedTextCopy.replace(extractedTextCopy.slice(lastIndexOfLastAnswer, nextIndex), '')
       }
     }
     
-    questionsAndAnswer[currentQuestionIndex].answers.push({ value: extractedAnswer.replace(answerRegex, '').trim() })
+    questionsAndAnswer[currentQuestionIndex].answers.push({ value: extractedAnswer.replace(answerRegex, '').replace(/\s\s+/g, ' ').trim() })
     // questionsAndAnswer[currentQuestionIndex].answers.push({ value: extractedAnswer})
-    console.log({ questionsAndAnswer })
     extractedTextCopy = extractedTextCopy.replace(extractedAnswer, '')
     i += 1
   }

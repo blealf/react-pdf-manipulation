@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+import PropTypes from 'prop-types'
 import { useState, forwardRef, useEffect } from 'react'
 import { pdfjs, Document, Page } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -14,7 +14,6 @@ const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages, 
   }, [pdfFile, setPageNumber]);
 
   function onDocumentLoadSuccess({ numPages }) {
-     console.log('loaded')
      setNumPages(numPages);
      setLoaded(true);
    }
@@ -68,8 +67,18 @@ const PdfViewer = ({ pdfFile, numPages, pageNumber, setPageNumber, setNumPages, 
   )
 }
 
+// eslint-disable-next-line react/display-name
 export const PdfViewerWrapper = forwardRef(function (props, ref) {
   return <PdfViewer {...props} pdfFileRef={ref} />
 })
+
+PdfViewer.propTypes = {
+  pdfFile: PropTypes.any,
+  numPages: PropTypes.number,
+  pageNumber: PropTypes.number,
+  setPageNumber: PropTypes.func,
+  setNumPages: PropTypes.func,
+  pdfFileRef: PropTypes.any
+}
 
 export default PdfViewer

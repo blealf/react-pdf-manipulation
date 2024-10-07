@@ -24,8 +24,6 @@ const ImageModal = ({ showImageModal, setShowImageModal, imageSrc, insertCropped
   const [insertCroppedImageLoading, setInsertCroppedImageLoading] = useState(false)
 
   useEffect(() => {
-    console.log({ crop })
-    console.log({ imageSrc })
     setInsertCroppedImageLoading(false)
   }, [showImageModal, imageSrc, crop])
 
@@ -34,8 +32,7 @@ const ImageModal = ({ showImageModal, setShowImageModal, imageSrc, insertCropped
   }
 
   const onChangeCrop = (cropper) => {
-    console.log('Coordinates', cropper.getCoordinates())
-    console.log('Canvas: ', cropper.getCanvas());
+    // console.log('Coordinates', cropper.getCoordinates(), cropper.getCanvas());
     setCrop(cropper.getCanvas())
   };
   
@@ -47,7 +44,6 @@ const ImageModal = ({ showImageModal, setShowImageModal, imageSrc, insertCropped
   }
 
   const getCroppedImg = async () => {
-    console.log({ crop })
     const canvas = crop
 
     //todataURL returns a base64 encoded string

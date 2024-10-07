@@ -45,12 +45,14 @@ export const MButton = (props) => {
         return 'text-md min-w-32'
     }
   }
+
   return (
     <button
       {...props}
+      loading={(props.loading ? props.loading : false).toString()}
       className={`${classStyle} ${type()} ${size()} ${props.className}`}
     >
-      {props.loading ? loadingComponent() : props.children}
+      {props?.loading ? loadingComponent() : props.children}
     </button>
   )
 }

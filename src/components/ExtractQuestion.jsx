@@ -1,286 +1,154 @@
 import { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
-import pdfToText from "react-pdftotext";
-import * as pdfjsLib from 'pdfjs-dist/build/pdf';
-import html2canvas from 'html2canvas';
+import { pdfjs } from 'react-pdf';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 import QuestionsCard from './QuestionsCard';
-import PdfViewer, { PdfViewerWrapper } from './PdfViewer';
+import { PdfViewerWrapper } from './PdfViewer';
 import { MButton } from './ReusableComponents'
 import Panel, { LeftPanel, RightPanel } from './Panel'
 import AnswerStyle from './AnswerStyle';
 import ControlPanel from './ControlPanel';
-import { base64toBlob,extractQuestionAndAnswers } from '../utils/helperMethod';
+import { extractQuestionAndAnswers } from '../utils/helperMethod';
 
 const ExtractQuestion = () => {
   const [pdfFile, setPdfFile] = useState(null)
   const [numPages, setNumPages] = useState();
   const [pageNumber, setPageNumber] = useState(1);
-  const [extractedText, setExtractedText] = useState('')
-  const [extractedImage, setExtractedImage] = useState(null)
-  const [text, setText] = useState('');
-  const [questions, setQuestions] = useState('');
-  const [question, setQuestion] = useState('');
-  const [answers, setAnswers] = useState([]);
-  const [selection, setSelection] = useState('');
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [answerStyle, setAnswerStyle] = useState('')
-  const [customAnswerStyle, setCustomAnswerStyle] = useState('')
   const [extractedPageText, setExtractedPageText] = useState([])
   const [questionsDatabase, setQuestionsDatabase] = useState([])
+  const [questions, setQuestions] = useState('');
+  const [extractedText, setExtractedText] = useState('')
+  const [extractedImage, setExtractedImage] = useState(null)
+  const [answerStyle, setAnswerStyle] = useState('')
+  const [customAnswerStyle, setCustomAnswerStyle] = useState('')
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [resetPage, setResetPage] = useState(false)
+  const [currentRenderingPage, setCurrentRenderingPage] = useState(1)
   
   const textareaRef = useRef(null)
   const fileInput = useRef(null)
   const pdfFileRef = useRef(null)
 
   useEffect(() => {
-    textareaRef.current.addEventListener('selectionchange', getSelectedText)
-
-    try {
-      axios.get('http://localhost:80/ocr')
-        .then((res) => console.log(res.data))
-    } catch (error) {
-      console.log(error)
-    }
-    return () => {
-      textareaRef.current?.removeEventListener('selectionchange', getSelectedText)
-    }
-  }, [textareaRef.current?.selectionStart, textareaRef.current?.selectionEnd])
-
-  useEffect(() => {
     if (extractedPageText.length > 0) {
       setExtractedText(extractedPageText[pageNumber - 1]?.text)
-      setIsExtracting(true)
-      setTimeout(async () => {
-        await handleImageConvert()
-        setIsExtracting(false)
-      }, 1000)
-      
-      // if(!extractedPageText[pageNumber - 1]?.image) return
-      // const blob = base64toBlob(extractedPageText[pageNumber - 1]?.image, 'png');
-      // const blobUrl = URL.createObjectURL(blob);
-      // setExtractedImage(blobUrl)
+      if(!extractedPageText[pageNumber - 1]?.image) return
+      setExtractedImage(extractedPageText[pageNumber - 1]?.image)
+      if (resetPage) {
+        setResetPage(false)
+        setQuestions([])
+      }
     }
-  }, [pageNumber, extractedPageText])
+  }, [pageNumber, extractedPageText, resetPage])
 
-  const handleExtractContent = (e) => {
-    e.preventDefault()
+ /**
+  * The function `handleExtractContent` extracts text and images from each page of a PDF file using
+  * PDF.js in a React application.
+  */
+  const handleExtractContent = async () => {
+   /* The code `const blobUrl = URL.createObjectURL(pdfFile);` is creating a URL object from the PDF
+   file, allowing it to be used as a source for loading the PDF file. */
+    const blobUrl = URL.createObjectURL(pdfFile);
+    const loadingTask = pdfjs.getDocument(blobUrl);
+    const pagedData = []
 
-    if (!pdfFile) return
-    setIsExtracting(true)
-    axios.post('http://localhost:80/pdf-extract', {
-      pdf: pdfFile
-    }, { headers: { 'Content-Type': 'multipart/form-data' } })
-      .then(({ data }) => {
-        console.log({ data, text: data })
-        const getPageData = []
-        data.pages.forEach((page) => {
-          let getText = ''
-          page.content.forEach((value) => {
-            getText += ' ' + value.str
-          })
-          getPageData.push({
-            text: getText,
-            image: page?.image
-          })
+    try {
+      setIsExtracting(true)
+      const pdf = await loadingTask.promise;
+      const numPages = pdf.numPages;
+      let canvasdiv = document.getElementById('canvas');
+
+      // Iterate through each page and extract text
+      for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+        setCurrentRenderingPage(pageNumber)
+        const page = await pdf.getPage(pageNumber);
+        let getText = ''
+        let getImage = ''
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale: scale });
+        const canvas = document.createElement('canvas');
+        canvasdiv.appendChild(canvas);
+
+      // Prepare canvas using PDF page dimensions
+        var context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        // Render PDF page into canvas context
+        var renderContext = { canvasContext: context, viewport: viewport };
+        await page.render(renderContext).promise
+        getImage = canvas.toDataURL('image/png')
+
+        // get Text from the pdf
+        const textContent = await page.getTextContent();
+        textContent.items.forEach((item) => {
+          if ("str" in item) {
+            if (item.hasEOL) {
+              getText += item.str + " \n";
+            } else {
+              getText += item.str + " ";
+            }
+          }
         })
-        console.log([ ...getPageData ])
-        setExtractedPageText(getPageData)
-        setPageNumber(1)
-      })
-      .catch((err) => console.log(err))
-      .finally(() => setIsExtracting(false))
-  }
 
-  const handleExtractText = (e) => {
-    e.preventDefault()
-    if (!pdfFile) return
-    setIsExtracting(true)
-    axios.post('http://localhost:80/parse-text', {
-      pdf: pdfFile
-    }, { headers: { 'Content-Type': 'multipart/form-data' } })
-      .then(({ data }) => {
-        console.log({ data })
-        console.log({data, text: data.data.text})
-        setExtractedText(data.data.text)
-      })
-      .catch((err) => console.log(err))
-      .finally(() => setIsExtracting(false))
-    
-  }
-
-  const handleExtractPageText = (e) => {
-    e.preventDefault()
-
-    if (!pdfFile) return
-    setIsExtracting(true)
-    axios.post('http://localhost:80/pdf-text-reader', {
-      pdf: pdfFile
-    }, { headers: { 'Content-Type': 'multipart/form-data' } })
-      .then(({ data }) => {
-        console.log(data.pages)
-        setExtractedPageText(data.pages)
-      })
-      .catch((err) => console.log(err))
-      .finally(() => setIsExtracting(false))
-    
-  }
-
-  const convertPDFToDataURL = () => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = function() {
-        try {
-          // Convert binary data to base64 and create a Data URL
-          const base64String = reader.result.split(',')[1];
-          const dataUrl = `data:application/pdf;base64,${base64String}`;
-          resolve(dataUrl); // Resolve the promise with the data URL
-        } catch (error) {
-          reject(error); // Reject in case of any errors
-        }
-      };
-
-      reader.onerror = function() {
-        reject(reader.error); // Reject if there’s a reading error
-      };
-
-      reader.readAsDataURL(pdfFile); // Read the PDF file as a Data URL
-    });
-  }
-
-  const blobToBase6 = (blob) => {
-  return new Promise((resolve, _) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
-}
-
-
-  const handleConvertPdfToImage = async () => {
-    const imagesList = [];
-    console.log({ pdfFile })
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("className", "canv");
-    const data = await blobToBase6(pdfFile);
-    console.log({ data })
-    const pdf = await pdfjsLib.getDocument({ data }).promise;
-    for (let i = 1; i <= pdf.numPages; i++) {
-      var page = await pdf.getPage(i);
-      var viewport = page.getViewport({ scale: 1.5 });
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-      var render_context = {
-        canvasContext: canvas.getContext("2d"),
-        viewport: viewport,
-      };
-      await page.render(render_context).promise;
-      let img = canvas.toDataURL("image/png");
-      imagesList.push(img);
-    }
-    console.log({ imagesList })
-  }
-
-  const handleImageConvert = async () => {
-    // e.preventDefault()
-    try {
-      console.log({ pdfFileRef })
-      // highresolution html2Canvas
-      const output = await html2canvas(pdfFileRef.current, {
-        type: 'dataURL',
-        useCORS: false,
-        removeContainer: true,
-        logging: true,
-        scale: 2,
-        width: pdfFileRef.current?.offsetWidth,
-        height: pdfFileRef.current?.offsetHeight,
-        dpi: 600,
-        allowTaint: true,
-      })
-      const base64Image = output?.toDataURL('image/png');
-      setExtractedImage(base64Image)
+        pagedData.push({
+          text: getText,
+          image: getImage
+        })
+      }
     } catch (error) {
-      console.log(error)
-    }
-  }
-
-  const extractText = async () => {
-    try {
-      setIsExtracting(true)
-      const extracted = await pdfToText(pdfFile)
-      setExtractedText(extracted)
-      console.log(extracted)
-    } catch (error) {
-      console.log(error)
+      // console.log(error)
     } finally {
       setIsExtracting(false)
+      setCurrentRenderingPage(1)
     }
-  }
+    
+    setExtractedPageText(pagedData)
+    setPageNumber(1)
 
-  const getSelectedText = () => {
-    // console.log({ textSelection: document.getSelection().toString() })
-    if (document.getSelection) {
-      setSelection(document.getSelection().toString())
-    }
+    /* The code `URL.revokeObjectURL(blobUrl); loadingTask.destroy();` is used to clean up resources
+    after extracting text from a PDF file. */
+    URL.revokeObjectURL(blobUrl);
+    loadingTask.destroy();
   }
 
   const handlePopulateQuestions = () => {
-    const { extractedTextCopy, questionsAndAnswer } = extractQuestionAndAnswers({ extractedText, answerStyle })
+    const questionsDatabaseLength = questionsDatabase.length
+    const { questionsAndAnswer } = extractQuestionAndAnswers({ extractedText, answerStyle, currentNumber: questionsDatabaseLength })
     setQuestions(questionsAndAnswer)
-    setExtractedText(extractedTextCopy)
+    setExtractedText('')
   }
 
-  const separateAnswers = () => {
-    const answersRegex = /[A-Z]\)\s?/g
-    const selectedAnswers = selection.split(answersRegex)
-    const formattedanswers = []
-    selectedAnswers.forEach((answer) => {
-      if(answer.trim()?.length) formattedanswers.push(answer.trim())
-    })
-    setQuestions([...questions, {
-      question: question.replace(selection, ''),
-      answers: formattedanswers
-    }])
-    console.log({ questions })
-    setExtractedText(extractedText.replace(text, '').trim())
-    setSelection('')
-    setQuestion('')
-    setAnswers([])
-    setText('')
-  }
-
-  const processQuestion = () => {
-    setText(selection)
-    setQuestion(selection)
-    setSelection('')
-  }
-
-  const updateQuestions = (index, question) => {
+  const updateQuestions = (index, q) => {
     const newQuestions = [...questions]
-    newQuestions[index] = question
+    newQuestions[index] = q
     setQuestions(newQuestions)
   }
 
   const updateQuestionDatabase = (values) => {
-    setQuestionsDatabase([...questionsDatabase, ...values])
-  }
-
-  const handleClearSelection = () => {
-    setSelection('')
-    setQuestion('')
-    setAnswers([])
-    setText('')
+    const currentNumberOfQuestions = questionsDatabase.length
+    let updatedData = [...questionsDatabase]
+    values.forEach((question, index) => {
+      const existingQuestion = questionsDatabase.find(q => q.question === question.question)
+      const existingQuestionIndex = questionsDatabase.indexOf(existingQuestion)
+      if (existingQuestion && existingQuestionIndex !== -1) {
+        const tempQuestionDatabase = questionsDatabase.slice(0, questionsDatabase.indexOf(question))
+        const restQuestionDaabase = questionsDatabase.slice(questionsDatabase.indexOf(question) + 1)
+        updatedData = ([...tempQuestionDatabase, question, ...restQuestionDaabase])
+        return
+      }
+      updatedData.push({ number: currentNumberOfQuestions + index + 1, ...question })
+    })
+    setQuestionsDatabase(updatedData)
+    setQuestions([])
+    setPageNumber(pageNumber + 1 <= numPages ? pageNumber + 1 : pageNumber)
   }
 
   const handleClear = () => {
     setExtractedText('')
+    setQuestionsDatabase([])
     setQuestions([])
-    setSelection('')
-    setQuestion('')
-    setAnswers([])
     setPdfFile(null)
     setAnswerStyle('')
     setCustomAnswerStyle('')
@@ -290,17 +158,13 @@ const ExtractQuestion = () => {
       fileInput.current.value = ''
   }
 
-  const handleClearQuestions = () => {
-    setQuestions([])
-    setSelection('')
-    setQuestion('')
-    setAnswers([])
-  }
-
   return (
     <>
-      <div className="p-4 w-full flex" style={isExtracting ? { pointerEvents: 'none', opacity: 0.5 } : {}}>
-        <div className="w-1/2 !z-[0]">
+      <div className={`${!isExtracting && 'p-4'} w-full flex flex-col-reverse xl:flex-row relative`} style={isExtracting ? { pointerEvents: 'none', opacity: 0.5 } : {}}>
+        {isExtracting && <div className="z-[99] absolute w-[100vw] h-[100vh] bg-gray-400 flex justify-center items-center opacity-50">
+          <p className="text-[50px] font-extrabold text-gray-100 translate-y-[-50%]">Rendering page {currentRenderingPage}...</p>
+        </div>}
+        <div className="w-full xl:w-1/2 !z-[0]">
           <PdfViewerWrapper
             pdfFile={pdfFile}
             numPages={numPages}
@@ -310,13 +174,13 @@ const ExtractQuestion = () => {
             ref={pdfFileRef}
           />
         </div>
-        <div className="w-1/2">
+        <div className="w-full xl:w-1/2">
           <Panel>
             <LeftPanel>
               <div className="relative">
                 {pdfFile && <div className="absolute left-0 right-0 w-full flex gap-2 justify-between items-center p-2">
                   {pdfFile && <div className="flex flex-col gap-2 justify-start items-center">
-                    {!extractedText && <AnswerStyle
+                    {!extractedPageText.length && <AnswerStyle
                       answerStyle={answerStyle}
                       setAnswerStyle={setAnswerStyle}
                       customAnswerStyle={customAnswerStyle}
@@ -327,13 +191,14 @@ const ExtractQuestion = () => {
                     answerStyle={answerStyle}
                     setAnswerStyle={setAnswerStyle}
                     extractedText={extractedText}
+                    extractedPageText={extractedPageText}
                     handlePopulateQuestions={handlePopulateQuestions}
                     handleExtractContent={handleExtractContent}
                     isExtracting={isExtracting}
-                    handleExtractPageText={handleExtractPageText}
                     disablePopulateButton={questions.length > 0}
+                    setResetPage={setResetPage}
                   />
-                  <MButton onClick={handleClear} type="danger" size="small" className="ml-auto">Reset</MButton>
+                  <MButton onClick={handleClear} type="danger" size="small" className="ml-auto">Reset All</MButton>
                 </div>}
                 <div className="flex flex-col justify-center items-center h-[40vh] text-md p-2 rounded-xl">
                   {!pdfFile && (
@@ -354,8 +219,8 @@ const ExtractQuestion = () => {
                   
                   <textarea
                     ref={textareaRef}
-                    value={question.length ? question : extractedText}
-                    onChange={(e) => question.length ? setQuestion(e.target.value) : setExtractedText(e.target.value)}
+                    value={extractedText}
+                    onChange={(e) => setExtractedText(e.target.value)}
                     className="w-full mt-[90px] min-h-[95%] text-md p-2 border border-gray-300 rounded-xl outline-none"
                     style={{ display: !pdfFile || (pdfFile && !extractedText) ?  'none' : 'block' }}
                 />
@@ -365,7 +230,7 @@ const ExtractQuestion = () => {
             <RightPanel defaultHeight="90%">
               <QuestionsCard
                 questions={questions}
-                handleClearQuestions={handleClearQuestions}
+                questionsDatabaseLength={questionsDatabase.length}
                 updateQuestions={updateQuestions}
                 updateQuestionDatabase={updateQuestionDatabase}
                 extractedImage={extractedImage}
@@ -374,7 +239,7 @@ const ExtractQuestion = () => {
           </Panel>
         </div>
       </div>
-      {extractedImage && <img src={extractedImage} alt="Extracted Image" className="w-[50%] mx-auto h-[auto] object-cover" />}
+      <div id="canvas" className="hidden" ></div>
     </>
   )
 }
